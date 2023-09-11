@@ -116,6 +116,12 @@ build-go:
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
 		-ldflags "-X github.com/$(REPO)/pkg/version.Version=$(VERSION) -X github.com/$(REPO)/pkg/version.GitSHA=$(GIT_SHA)" \
 		-o bin/$(EXPORTER_NAME)-linux-amd64 cmd/exporter/main.go
+	CGO_ENABLED=0 GOOS=linux GOARCH=ppc64le go build \
+		-ldflags "-X github.com/$(REPO)/pkg/version.Version=$(VERSION) -X github.com/$(REPO)/pkg/version.GitSHA=$(GIT_SHA)" \
+		-o bin/$(PROJECT_NAME)-linux-ppc64le main.go
+	CGO_ENABLED=0 GOOS=linux GOARCH=ppc64le go build \
+		-ldflags "-X github.com/$(REPO)/pkg/version.Version=$(VERSION) -X github.com/$(REPO)/pkg/version.GitSHA=$(GIT_SHA)" \
+		-o bin/$(EXPORTER_NAME)-linux-ppc64le cmd/exporter/main.go
 	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build \
 		-ldflags "-X github.com/$(REPO)/pkg/version.Version=$(VERSION) -X github.com/$(REPO)/pkg/version.GitSHA=$(GIT_SHA)" \
 		-o bin/$(PROJECT_NAME)-darwin-amd64 main.go
@@ -129,18 +135,18 @@ build-go:
 		-ldflags "-X github.com/$(REPO)/pkg/version.Version=$(VERSION) -X github.com/$(REPO)/pkg/version.GitSHA=$(GIT_SHA)" \
 		-o bin/$(EXPORTER_NAME)-windows-amd64.exe cmd/exporter/main.go
 
-build-image:
+build-image: login
 	docker buildx build --push --platform linux/amd64,linux/ppc64le --build-arg VERSION=$(VERSION) --build-arg DOCKER_REGISTRY=$(DOCKER_REGISTRY) --build-arg DISTROLESS_DOCKER_REGISTRY=$(DISTROLESS_DOCKER_REGISTRY) --build-arg GIT_SHA=$(GIT_SHA) -t $(REPO):$(VERSION) .
 	docker pull $(REPO):$(VERSION)
 	docker tag $(REPO):$(VERSION) $(REPO):latest
 
-build-zk-image:
+build-zk-image: login
 
 	docker buildx build --push --platform linux/amd64,linux/ppc64le --build-arg VERSION=$(VERSION)  --build-arg DOCKER_REGISTRY=$(DOCKER_REGISTRY) --build-arg GIT_SHA=$(GIT_SHA) -t $(APP_REPO):$(VERSION) ./docker
 	docker pull $(APP_REPO):$(VERSION)
 	docker tag $(APP_REPO):$(VERSION) $(APP_REPO):latest
 
-build-zk-image-swarm:
+build-zk-image-swarm: login
 	docker buildx build --push --platform linux/amd64,linux/ppc64le docker build --build-arg VERSION=$(VERSION)-swarm  --build-arg DOCKER_REGISTRY=$(DOCKER_REGISTRY) --build-arg GIT_SHA=$(GIT_SHA) \
 		-f ./docker/Dockerfile-swarm -t $(APP_REPO):$(VERSION)-swarm ./docker
 	docker pull $(APP_REPO):$(VERSION)-swarm
@@ -171,7 +177,7 @@ login:
 test-login:
 	echo "$(DOCKER_TEST_PASS)" | docker login -u "$(DOCKER_TEST_USER)" --password-stdin
 
-push: build-image build-zk-image login
+push: build-image build-zk-image
 	docker push $(REPO):$(VERSION)
 	docker push $(REPO):latest
 	docker push $(APP_REPO):$(VERSION)
