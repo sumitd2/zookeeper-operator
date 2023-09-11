@@ -130,17 +130,20 @@ build-go:
 		-o bin/$(EXPORTER_NAME)-windows-amd64.exe cmd/exporter/main.go
 
 build-image:
-	docker build --build-arg VERSION=$(VERSION) --build-arg DOCKER_REGISTRY=$(DOCKER_REGISTRY) --build-arg DISTROLESS_DOCKER_REGISTRY=$(DISTROLESS_DOCKER_REGISTRY) --build-arg GIT_SHA=$(GIT_SHA) -t $(REPO):$(VERSION) .
+	docker buildx build --push --platform linux/amd64,linux/ppc64le --build-arg VERSION=$(VERSION) --build-arg DOCKER_REGISTRY=$(DOCKER_REGISTRY) --build-arg DISTROLESS_DOCKER_REGISTRY=$(DISTROLESS_DOCKER_REGISTRY) --build-arg GIT_SHA=$(GIT_SHA) -t $(REPO):$(VERSION) .
+	docker pull $(REPO):$(VERSION)
 	docker tag $(REPO):$(VERSION) $(REPO):latest
 
 build-zk-image:
 
-	docker build --build-arg VERSION=$(VERSION)  --build-arg DOCKER_REGISTRY=$(DOCKER_REGISTRY) --build-arg GIT_SHA=$(GIT_SHA) -t $(APP_REPO):$(VERSION) ./docker
+	docker buildx build --push --platform linux/amd64,linux/ppc64le --build-arg VERSION=$(VERSION)  --build-arg DOCKER_REGISTRY=$(DOCKER_REGISTRY) --build-arg GIT_SHA=$(GIT_SHA) -t $(APP_REPO):$(VERSION) ./docker
+	docker pull $(APP_REPO):$(VERSION)
 	docker tag $(APP_REPO):$(VERSION) $(APP_REPO):latest
 
 build-zk-image-swarm:
-	docker build --build-arg VERSION=$(VERSION)-swarm  --build-arg DOCKER_REGISTRY=$(DOCKER_REGISTRY) --build-arg GIT_SHA=$(GIT_SHA) \
+	docker buildx build --push --platform linux/amd64,linux/ppc64le docker build --build-arg VERSION=$(VERSION)-swarm  --build-arg DOCKER_REGISTRY=$(DOCKER_REGISTRY) --build-arg GIT_SHA=$(GIT_SHA) \
 		-f ./docker/Dockerfile-swarm -t $(APP_REPO):$(VERSION)-swarm ./docker
+	docker pull $(APP_REPO):$(VERSION)-swarm
 
 test:
 	go test $$(go list ./... | grep -v /vendor/ | grep -v /test/e2e) -race -coverprofile=coverage.txt -covermode=atomic
@@ -149,8 +152,7 @@ test-e2e: test-e2e-remote
 
 test-e2e-remote:
 	make test-login
-	docker build . -t $(TEST_IMAGE)
-	docker push $(TEST_IMAGE)
+	docker buildx build --push --platform linux/amd64,linux/ppc64le . -t $(TEST_IMAGE)
 	make deploy
 	RUN_LOCAL=false go test -v -timeout 2h ./test/e2e... -args -ginkgo.v
 	make undeploy
