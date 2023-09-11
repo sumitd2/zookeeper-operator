@@ -26,7 +26,7 @@ COPY api/ api/
 COPY controllers/ controllers/
 
 # Build
-RUN ARCH=$(arch) && if [[ "$ARCH" == "x86_64" ]] ; then ARCH=amd64 ; fi && \
+RUN ARCH=`uname -m` && if [[ "$ARCH" == "x86_64" ]] ; then ARCH=amd64 ; fi && \
     GOOS=linux GOARCH=$ARCH CGO_ENABLED=0 go build -o /src/${PROJECT_NAME} \
     -ldflags "-X ${REPO_PATH}/pkg/version.Version=${VERSION} -X ${REPO_PATH}/pkg/version.GitSHA=${GIT_SHA}" main.go
 
