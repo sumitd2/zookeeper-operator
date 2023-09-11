@@ -173,6 +173,8 @@ run-local:
 
 login:
 	@docker login -u "$(DOCKER_USER)" -p "$(DOCKER_PASS)"
+	docker buildx create --use --platform=linux/ppc64le,linux/amd64 --name multi-platform-builder
+	docker buildx inspect --bootstrap
 
 test-login:
 	echo "$(DOCKER_TEST_PASS)" | docker login -u "$(DOCKER_TEST_USER)" --password-stdin
