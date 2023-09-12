@@ -23,12 +23,19 @@ GIT_SHA=$(shell git rev-parse --short HEAD)
 TEST_IMAGE=$(TEST_REPO)-testimages:$(VERSION)
 DOCKER_TEST_PASS=testzkop@123
 DOCKER_TEST_USER=testzkop
+BUILDER=$(shell docker buildx inspect multi-platform-builder 1>&2 2> /dev/null; echo $$?)
 .PHONY: all build check clean test
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
 GOBIN=$(shell go env GOPATH)/bin
 else
 GOBIN=$(shell go env GOBIN)
+endif
+ifeq ($(BUILDER),0)
+$(shell docker buildx use multi-platform-builder)
+else
+$(shell docker buildx create --use --platform=linux/ppc64le,linux/amd64 --name multi-platform-builder)
+$(shell docker buildx inspect --bootstrap)
 endif
 
 # Install CRDs into a cluster
@@ -141,13 +148,12 @@ build-image: login
 	docker tag $(REPO):$(VERSION) $(REPO):latest
 
 build-zk-image: login
-
 	docker buildx build --push --platform linux/amd64,linux/ppc64le --build-arg VERSION=$(VERSION)  --build-arg DOCKER_REGISTRY=$(DOCKER_REGISTRY) --build-arg GIT_SHA=$(GIT_SHA) -t $(APP_REPO):$(VERSION) ./docker
 	docker pull $(APP_REPO):$(VERSION)
 	docker tag $(APP_REPO):$(VERSION) $(APP_REPO):latest
 
 build-zk-image-swarm: login
-	docker buildx build --push --platform linux/amd64,linux/ppc64le docker build --build-arg VERSION=$(VERSION)-swarm  --build-arg DOCKER_REGISTRY=$(DOCKER_REGISTRY) --build-arg GIT_SHA=$(GIT_SHA) \
+	docker buildx build --push --platform linux/amd64,linux/ppc64le --build-arg VERSION=$(VERSION)-swarm  --build-arg DOCKER_REGISTRY=$(DOCKER_REGISTRY) --build-arg GIT_SHA=$(GIT_SHA) \
 		-f ./docker/Dockerfile-swarm -t $(APP_REPO):$(VERSION)-swarm ./docker
 	docker pull $(APP_REPO):$(VERSION)-swarm
 
@@ -173,16 +179,12 @@ run-local:
 
 login:
 	@docker login -u "$(DOCKER_USER)" -p "$(DOCKER_PASS)"
-	docker buildx create --use --platform=linux/ppc64le,linux/amd64 --name multi-platform-builder
-	docker buildx inspect --bootstrap
 
 test-login:
 	echo "$(DOCKER_TEST_PASS)" | docker login -u "$(DOCKER_TEST_USER)" --password-stdin
 
 push: build-image build-zk-image
-	docker push $(REPO):$(VERSION)
 	docker push $(REPO):latest
-	docker push $(APP_REPO):$(VERSION)
 	docker push $(APP_REPO):latest
 	docker tag $(REPO):$(VERSION) $(ALTREPO):$(VERSION)
 	docker tag $(REPO):$(VERSION) $(ALTREPO):latest
