@@ -32,10 +32,10 @@ else
 GOBIN=$(shell go env GOBIN)
 endif
 ifeq ($(BUILDER),0)
-$(shell docker buildx use multi-platform-builder)
+$(shell docker buildx use multi-platform-builder 1>&2 2> /dev/null)
 else
-$(shell docker buildx create --use --platform=linux/ppc64le,linux/amd64 --name multi-platform-builder)
-$(shell docker buildx inspect --bootstrap)
+$(shell docker buildx create --use --platform=linux/ppc64le,linux/amd64 --name multi-platform-builder 1>&2 2> /dev/null)
+$(shell docker buildx inspect --bootstrap 1>&2 2> /dev/null)
 endif
 
 # Install CRDs into a cluster
