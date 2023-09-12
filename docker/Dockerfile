@@ -9,7 +9,7 @@
 #
 
 ARG DOCKER_REGISTRY
-FROM  ${DOCKER_REGISTRY:+$DOCKER_REGISTRY/}ubuntu:22.04
+FROM  ${DOCKER_REGISTRY:+$DOCKER_REGISTRY/}debian:bullseye-slim
 RUN apt update -y && apt install -y openjdk-11-jdk && mkdir /zu
 COPY zu /zu
 WORKDIR /zu
